@@ -632,9 +632,10 @@ function ModuleHead({ title, intro, onBack }) {
 }
 
 /* ---------- Stage 0: Opening ---------- */
-function Opening({ next, playerName, setPlayerName }) {
+function Opening({ next, playerName, setPlayerName, segment, setSegment }) {
   const trimmedName = playerName.trim();
-  const handleSubmit = (event) => { event.preventDefault(); if (trimmedName) next(); };
+  const canStart = !!trimmedName && !!segment;
+  const handleSubmit = (event) => { event.preventDefault(); if (canStart) next(); };
   return (
     <section className="stage opening-grid">
       <div>
@@ -653,9 +654,14 @@ function Opening({ next, playerName, setPlayerName }) {
             onChange={(event) => setPlayerName(event.target.value)}
             autoComplete="name"
           />
+          <label className="name-input-label" htmlFor="player-segment" style={{ marginTop: '.9rem' }}>Em qual segmento da R2Pharma você trabalha?</label>
+          <select id="player-segment" className="name-input" value={segment} onChange={(event) => setSegment(event.target.value)}>
+            <option value="">Selecione…</option>
+            {SEGMENTOS.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
         </form>
         <div className="button-row">
-          <button className="btn btn-primary" disabled={!trimmedName} onClick={next}>Iniciar Jornada <ArrowRight size={17} /></button>
+          <button className="btn btn-primary" disabled={!canStart} onClick={next}>Iniciar Jornada <ArrowRight size={17} /></button>
           <span className="opening-note"><Clock3 size={16} /> <strong>{stageNames.length} etapas</strong> · prática e direta</span>
         </div>
       </div>
@@ -1415,7 +1421,8 @@ function IntroVideo({ onFinish, dataId = 'intro-video-data', label = 'Vídeo de 
 
 /* ---------- Registro online (Supabase) ---------- */
 const SB = { url: 'https://laljexkkqnaczrtbfohy.supabase.co', key: 'sb_publishable_aaOWM_kmMkSlH1uF6kAdhQ_oVfsh_y2' };
-const GD = { pid: null, name: '', done: {} };
+const SEGMENTOS = ['Unidade Cold Kits','Unidade Cíclotron Itupeva','Unidade Cíclotron Curitiba','Unidade Cíclotron São José do Rio Preto','Unidade Cíclotron Vitória de Santo Antão','Unidade Cíclotron Duque de Caxias','RFC SP','RFC RJ','Escritório Administrativo'];
+const GD = { pid: null, name: '', seg: '', done: {} };
 function track(ev, extra) {
   try {
     if (!/^https:\/\//.test(SB.url)) return;
@@ -1425,7 +1432,7 @@ function track(ev, extra) {
     const headers = { 'Content-Type': 'application/json', apikey: SB.key, Prefer: 'return=minimal' };
     if (!SB.key.startsWith('sb_')) headers.Authorization = 'Bearer ' + SB.key;
     fetch(SB.url + '/rest/v1/eventos_treinamento', { method: 'POST', keepalive: true, headers,
-      body: JSON.stringify({ participante_id: GD.pid, jogo: 'guardiao', nome: (GD.name || 'Participante').slice(0, 80), evento: ev, ...(extra || {}) }) }).catch(() => {});
+      body: JSON.stringify({ participante_id: GD.pid, jogo: 'guardiao', segmento: GD.seg || null, nome: (GD.name || 'Participante').slice(0, 80), evento: ev, ...(extra || {}) }) }).catch(() => {});
   } catch (e) {}
 }
 
@@ -1437,6 +1444,7 @@ function App() {
   const [stage, setStage] = useState(0);
   const [maxStage, setMaxStage] = useState(0);
   const [playerName, setPlayerName] = useState('');
+  const [segment, setSegment] = useState('');
   const [alcoaViewed, setAlcoaViewed] = useState([]);
   const [errorsFound, setErrorsFound] = useState([]);
   const [correctionAnswers, setCorrectionAnswers] = useState({});
@@ -1454,7 +1462,7 @@ function App() {
   const next = () => { const value = Math.min(LAST, stage + 1); goTo(value); setMaxStage(m => Math.max(m, value)); };
   const back = () => goTo(Math.max(0, stage - 1));
   const restart = () => {
-    GD.pid = null; GD.done = {}; GD.name = '';
+    GD.pid = null; GD.done = {}; GD.name = ''; GD.seg = ''; setSegment('');
     setStage(0); setMaxStage(0); setPlayerName(''); setFinalVideoDone(false); setWelcomeDone(false);
     setAlcoaViewed([]); setErrorsFound([]); setCorrectionAnswers({});
     setDocViewed([]); setClassifyAnswers({}); setDilemmaChoice(null); setQuizPlacements({});
@@ -1490,7 +1498,7 @@ function App() {
       <ProgressHeader stage={stage} maxStage={maxStage} onNavigate={goTo} onRestart={restart} />
       <div className="stage-shell">
         <StageCtx.Provider value={stage}>
-        {stage === 0 && <Opening next={() => { GD.name = playerName.trim(); track('cadastro'); next(); }} playerName={playerName} setPlayerName={setPlayerName} />}
+        {stage === 0 && <Opening next={() => { GD.name = playerName.trim(); GD.seg = segment; track('cadastro'); next(); }} playerName={playerName} setPlayerName={setPlayerName} segment={segment} setSegment={setSegment} />}
         {stage === 1 && <ChoiceModule back={back} next={next} items={realCases} answers={casesAns} setAnswers={setCasesAns} nextLabel="Ir para ALCOA+"
           title={<>Casos reais: <span className="accent-word">quando o registro falha.</span></>}
           intro="“Se um registro não consegue provar com confiança o que aconteceu, quando aconteceu e quem fez, quanto podemos confiar no dado?” Veja o que autoridades encontraram em empresas farmacêuticas e responda." />}
