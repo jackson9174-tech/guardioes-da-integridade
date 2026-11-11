@@ -1044,6 +1044,7 @@ function Finish({ onRestart, summary, playerName }) {
   const maxPoints = 28 + 4 + 7 + 6 + 10;
   const scorePercent = Math.round((totalPoints / maxPoints) * 100);
   const rank = scorePercent >= 85 ? 'Guardião Ouro' : scorePercent >= 65 ? 'Guardião Prata' : 'Guardião Bronze';
+  React.useEffect(() => { track('conclusao', { pontuacao: scorePercent, titulo: rank, pontos: totalPoints, pontos_max: maxPoints }); }, []);
   const rankMessage = scorePercent >= 85 ? 'Excelência em integridade' : scorePercent >= 65 ? 'Ótimo domínio das práticas' : 'Jornada concluída — continue evoluindo';
 
   const downloadCertificate = () => {
@@ -1168,7 +1169,7 @@ function Finish({ onRestart, summary, playerName }) {
             </div>
             <div className="button-row" style={{ justifyContent: 'center' }}>
               <button className="btn btn-primary" onClick={downloadCertificate}><Trophy size={16} /> Baixar certificado em PDF</button>
-              <a className="btn btn-primary" href="https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=N9OQ4IYN7E-BDpkA4meEgnjqovly7nJEihr5QZvGDY5UQUw0SlRCQTRRSk1BRTc2MVVTTjhCOFpMSy4u" target="_blank" rel="noopener noreferrer"><CheckCircle2 size={16} /> Confirmar conclusão do treinamento</a>
+              <a className="btn btn-primary" href="https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=N9OQ4IYN7E-BDpkA4meEgnjqovly7nJEihr5QZvGDY5UQUw0SlRCQTRRSk1BRTc2MVVTTjhCOFpMSy4u" onClick={() => track('confirmacao')} target="_blank" rel="noopener noreferrer"><CheckCircle2 size={16} /> Confirmar conclusão do treinamento</a>
               <button className="btn btn-quiet" onClick={onRestart}><RotateCcw size={16} /> Reiniciar jornada</button>
             </div>
             <p className="footer-note" style={{ marginTop: '.75rem' }}>Clique em "Confirmar conclusão" para registrar oficialmente que você concluiu este treinamento.</p>
@@ -1412,6 +1413,22 @@ function IntroVideo({ onFinish, dataId = 'intro-video-data', label = 'Vídeo de 
   );
 }
 
+/* ---------- Registro online (Supabase) ---------- */
+const SB = { url: 'https://laljexkkqnaczrtbfohy.supabase.co', key: 'sb_publishable_aaOWM_kmMkSlH1uF6kAdhQ_oVfsh_y2' };
+const GD = { pid: null, name: '', done: {} };
+function track(ev, extra) {
+  try {
+    if (!/^https:\/\//.test(SB.url)) return;
+    if (!GD.pid) GD.pid = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const n = Math.random() * 16 | 0; return (c === 'x' ? n : (n & 3 | 8)).toString(16); });
+    if (ev !== 'cadastro' && GD.done[ev]) return;
+    GD.done[ev] = true;
+    const headers = { 'Content-Type': 'application/json', apikey: SB.key, Prefer: 'return=minimal' };
+    if (!SB.key.startsWith('sb_')) headers.Authorization = 'Bearer ' + SB.key;
+    fetch(SB.url + '/rest/v1/eventos_treinamento', { method: 'POST', keepalive: true, headers,
+      body: JSON.stringify({ participante_id: GD.pid, jogo: 'guardiao', nome: (GD.name || 'Participante').slice(0, 80), evento: ev, ...(extra || {}) }) }).catch(() => {});
+  } catch (e) {}
+}
+
 /* ---------- Root App ---------- */
 function App() {
   const [introDone, setIntroDone] = useState(false);
@@ -1437,6 +1454,7 @@ function App() {
   const next = () => { const value = Math.min(LAST, stage + 1); goTo(value); setMaxStage(m => Math.max(m, value)); };
   const back = () => goTo(Math.max(0, stage - 1));
   const restart = () => {
+    GD.pid = null; GD.done = {}; GD.name = '';
     setStage(0); setMaxStage(0); setPlayerName(''); setFinalVideoDone(false); setWelcomeDone(false);
     setAlcoaViewed([]); setErrorsFound([]); setCorrectionAnswers({});
     setDocViewed([]); setClassifyAnswers({}); setDilemmaChoice(null); setQuizPlacements({});
@@ -1463,7 +1481,7 @@ function App() {
 
   if (!introDone) return <IntroVideo onFinish={() => { setIntroDone(true); window.scrollTo({ top: 0 }); }} />;
 
-  if (stage === 1 && !welcomeDone) return <IntroVideo key="welcome" dataId="welcome-video-data" label="Mensagem de boas-vindas" onFinish={() => { setWelcomeDone(true); window.scrollTo({ top: 0 }); }} />;
+  if (stage === 1 && !welcomeDone) return <IntroVideo key="welcome" dataId="welcome-video-data" label="Mensagem de boas-vindas" onFinish={() => { setWelcomeDone(true); track('inicio'); window.scrollTo({ top: 0 }); }} />;
 
   if (stage === LAST && !finalVideoDone) return <IntroVideo key="final" dataId="final-video-data" label="Vídeo de encerramento" onFinish={() => { setFinalVideoDone(true); window.scrollTo({ top: 0 }); }} />;
 
@@ -1472,7 +1490,7 @@ function App() {
       <ProgressHeader stage={stage} maxStage={maxStage} onNavigate={goTo} onRestart={restart} />
       <div className="stage-shell">
         <StageCtx.Provider value={stage}>
-        {stage === 0 && <Opening next={next} playerName={playerName} setPlayerName={setPlayerName} />}
+        {stage === 0 && <Opening next={() => { GD.name = playerName.trim(); track('cadastro'); next(); }} playerName={playerName} setPlayerName={setPlayerName} />}
         {stage === 1 && <ChoiceModule back={back} next={next} items={realCases} answers={casesAns} setAnswers={setCasesAns} nextLabel="Ir para ALCOA+"
           title={<>Casos reais: <span className="accent-word">quando o registro falha.</span></>}
           intro="“Se um registro não consegue provar com confiança o que aconteceu, quando aconteceu e quem fez, quanto podemos confiar no dado?” Veja o que autoridades encontraram em empresas farmacêuticas e responda." />}
