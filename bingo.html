@@ -351,6 +351,16 @@ function cert(){if(!window.jspdf){alert('Não foi possível carregar o gerador d
  d.text(S.conf?'Treinamento confirmado em '+S.conf.d.toLocaleString('pt-BR')+'  ·  Código '+S.conf.code:'Treinamento ainda não confirmado pelo participante.',W/2,140,{align:'center'});
  d.text('Emitido em '+new Date().toLocaleDateString('pt-BR'),W/2,150,{align:'center'});
  d.setFont('helvetica','italic');d.setFontSize(10);d.text('Qualidade se constrói todos os dias, com conhecimento e responsabilidade.',W/2,168,{align:'center'});
+ d.addPage();d.setFillColor(248,251,252);d.rect(0,0,W,H,'F');d.setDrawColor(...sec);d.setLineWidth(1.1);d.rect(8,8,W-16,H-16);d.setDrawColor(...pri);d.setLineWidth(.4);d.rect(11,11,W-22,H-22);
+ d.setTextColor(...sec);d.setFont('helvetica','bold');d.setFontSize(10);d.text('R2PHARMA  ·  BINGO - CONCEITO DA QUALIDADE',W/2,24,{align:'center'});
+ d.setTextColor(...pri);d.setFontSize(18);d.text('TERMOS DA CARTELA DE '+(S.name.trim()||'Participante').toUpperCase(),W/2,34,{align:'center'});
+ d.setDrawColor(...sec);d.setLineWidth(.4);d.line(W/2-45,38,W/2+45,38);
+ const ts=S.card.slice().sort((a,b)=>a-b),colW=(W-50)/2;let y0=48,col=0,y=y0;
+ ts.forEach((k,i)=>{const x=20+col*(colW+10),L=d.splitTextToSize(TERMS[k][2],colW-6);
+  d.setFont('helvetica','bold');d.setFontSize(10.5);d.setTextColor(...pri);d.text((i+1)+'. '+TERMS[k][1],x,y);
+  d.setFont('helvetica','normal');d.setFontSize(9);d.setTextColor(...mut);d.text(L,x+5,y+4.6);y+=4.6+L.length*4+4.5;
+  if(i===7){col=1;y=y0}});
+ d.setFont('helvetica','italic');d.setFontSize(9);d.setTextColor(...mut);d.text('Conceitos conforme o Glossário da Qualidade R2PHARMA.',W/2,H-16,{align:'center'});
  d.save('Certificado_Bingo_Conceito_da_Qualidade_'+(S.name.trim().replace(/\s+/g,'_')||'Participante')+'.pdf')}
 R();
 </script></body></html>
