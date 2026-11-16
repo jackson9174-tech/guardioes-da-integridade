@@ -419,7 +419,7 @@
                 if (!group.pid) group.pid = newPid();
                 const headers = { 'Content-Type': 'application/json', apikey: SB.key, Prefer: 'return=minimal' };
                 fetch(SB.url + '/rest/v1/eventos_treinamento', { method: 'POST', keepalive: true, headers,
-                    body: JSON.stringify({ participante_id: group.pid, jogo: 'memoria', segmento: sessionSegmento || null,
+                    body: JSON.stringify({ participante_id: group.pid, jogo: 'memoria_presencial', segmento: sessionSegmento || null,
                         nome: String(group.name || 'Grupo').slice(0, 80), evento: ev, ...(extra || {}) }) }).catch(() => {});
             } catch (e) {}
         }
