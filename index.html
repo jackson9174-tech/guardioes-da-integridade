@@ -251,9 +251,24 @@ h3 { font-size: 1.35rem; letter-spacing: -.03em; }
 .sheet-body { margin-top:1rem; border:1px solid #b7d7e2; padding:.8rem; min-height:120px; font-size:.7rem; line-height:1.7; position:relative; }
 .red-flag { position:absolute; border:2px dashed #238dcc; border-radius:.35rem; cursor:pointer; background:hsl(204 66% 49% / .08); transition:background .2s, transform .2s; z-index:2; }
 .red-flag:hover, .red-flag.found { background:hsl(181 49% 58% / .35); transform:scale(1.04); }
-.flag-1 { width:79px; height:39px; top:46px; left:91px; }.flag-2 { width:90px; height:30px; top:20px; right:29px; }.flag-3 { width:100px; height:58px; bottom:18px; left:30px; }.flag-4 { width:34px; height:56px; bottom:17px; right:75px; }
+.flag-1 { width:90px; height:30px; top:20px; right:29px; }.flag-2 { width:92px; height:28px; bottom:9px; left:8px; }.flag-3 { width:79px; height:32px; top:40px; left:91px; }.flag-4 { width:100px; height:34px; bottom:8px; left:24px; }.flag-5 { width:34px; height:56px; bottom:17px; right:75px; }
 .flag-number { position:absolute; width:22px; height:22px; border-radius:50%; background:#237fbb; color:#f5fbfd; display:grid; place-items:center; font-size:.7rem; font-weight:700; right:-10px; top:-10px; box-shadow:0 0 0 2px #f5fbfd; z-index:3; }
-.flag-2 .flag-number { right:6px; top:-13px; }
+.sheet-cell .flag-number { display:grid; font-size:.7rem; color:#f5fbfd; text-transform:none; letter-spacing:0; margin:0; }
+.flag-1 .flag-number { right:6px; top:-13px; }
+.flag-4 .flag-number { right:auto; left:-10px; }
+.rs-table { width:100%; border-collapse:collapse; table-layout:fixed; margin-top:1rem; font-size:.66rem; }
+.rs-table th { font-size:.52rem; color:#5d7d91; text-transform:uppercase; letter-spacing:.06em; text-align:left; font-weight:700; padding:.4rem .5rem; border:1px solid #b7d7e2; background:#eaf4f8; }
+.rs-table td { border:1px solid #b7d7e2; padding:.45rem .5rem; height:46px; position:relative; vertical-align:middle; }
+.rs-table td small { display:block; font-size:.5rem; color:#78837b; margin-top:.15rem; }
+.rs-flag { position:absolute; inset:3px; border:2px dashed #238dcc; border-radius:.35rem; cursor:pointer; background:hsl(204 66% 49% / .08); transition:background .2s, transform .2s; z-index:2; }
+.rs-flag:hover, .rs-flag.found { background:hsl(181 49% 58% / .35); }
+.rs-flag .flag-number { right:-8px; top:-12px; }
+.wo { display:inline-block; background:#fff; padding:.12rem .4rem; border-radius:.2rem .45rem .25rem .4rem; box-shadow:0 0 0 1px #e1e9ee, 0 1px 3px rgba(0,0,0,.18); transform:rotate(-2.5deg); }
+.rs-obs { min-height:128px; }
+.rs-obs .hand { max-width:62%; }
+.rs-note { position:absolute; right:14px; bottom:12px; width:132px; padding:.65rem .6rem .5rem; background:#fff3a8; transform:rotate(4deg); box-shadow:0 3px 8px rgba(0,0,0,.22); font-size:.68rem; line-height:1.3; z-index:1; }
+.rs-tape { position:absolute; left:50%; top:-8px; width:46px; height:15px; margin-left:-23px; background:rgba(210,225,235,.8); transform:rotate(-3deg); }
+@media (max-width: 640px) { .rs-table { font-size:.58rem; } .rs-table th { font-size:.46rem; padding:.3rem .3rem; } .rs-table td { padding:.3rem; height:42px; } .rs-obs .hand { max-width:100%; } .rs-table .hand { font-size:.56rem; letter-spacing:-.01em; } .rs-table .wo .hand { font-size:.56rem; } .rs-note { position:relative; right:auto; bottom:auto; margin:1rem 0 .2rem auto; width:118px; } }
 .hunt-side { position:sticky; top:2rem; }
 .hunt-count { display:flex; align-items:baseline; gap:.4rem; margin:.75rem 0 1rem; font-family:var(--app-font-serif); font-size:3.2rem; color:hsl(var(--primary)); }
 .hunt-count small { font:600 .72rem var(--app-font-sans); color:hsl(var(--muted-foreground)); }
@@ -461,10 +476,11 @@ const principles = [
 ];
 
 const errors = [
-  { id: 1, label: 'Corretivo / rasura ilegível', feedback: 'Errado. Corretivo e rasuras que escondem o dado original impedem saber o que realmente ocorreu. A correção certa é um risco simples sobre o dado, mantendo-o legível, acompanhado de justificativa, data e rubrica.' },
-  { id: 2, label: 'Registro sem data contemporânea', feedback: 'Errado. Assinar ou preencher um bloco de registros antecipadamente — ou com data retroativa — viola o princípio Contemporâneo. O dado precisa nascer no exato momento da atividade.' },
-  { id: 3, label: 'Anotação em papel avulso', feedback: 'Errado. Dados anotados em papel de rascunho ou na luva violam o princípio Original: o registro precisa nascer diretamente no documento oficial.' },
+  { id: 1, label: 'Registro sem data contemporânea', feedback: 'Errado. Três etapas diferentes aparecem registradas exatamente no mesmo horário (08:14): sinal de preenchimento antecipado ou em bloco. Viola o princípio Contemporâneo — o dado precisa nascer no exato momento da atividade.' },
+  { id: 2, label: 'Corretivo / rasura ilegível', feedback: 'Errado. Corretivo e rasuras que escondem o dado original impedem saber o que realmente ocorreu. A correção certa é um risco simples sobre o dado, mantendo-o legível, acompanhado de justificativa, data e rubrica.' },
+  { id: 3, label: 'Responsável e conferente são a mesma pessoa', feedback: 'Errado. Quem executa a atividade e quem faz a conferência não podem ser a mesma pessoa. A verificação independente é a segunda barreira de proteção do registro: com o mesmo nome nos dois campos, não existe conferência real e a atribuição fica comprometida.' },
   { id: 4, label: 'Espaço em branco não cancelado', feedback: 'Errado. Campos não utilizados devem ser anulados com um traço diagonal, evitando inserções posteriores não autorizadas.' },
+  { id: 5, label: 'Anotação em papel avulso', feedback: 'Errado. Dados anotados em papel de rascunho ou na luva violam o princípio Original: o registro precisa nascer diretamente no documento oficial.' },
 ];
 
 const quizItems = [
@@ -796,11 +812,12 @@ function Alcoa({ next, back, viewed, setViewed }) {
 function ErrorHunt({ next, back, found, setFound }) {
   const [active, setActive] = useState(null);
   const find = (id) => { if (!found.includes(id)) setFound([...found, id]); setActive(id); };
+  const flag = (id, badge) => (<div className={`rs-flag ${found.includes(id) ? 'found' : ''}`} onClick={() => find(id)} role="button" tabIndex={0} aria-label={`Ponto de risco ${id}`}>{badge && <span className="flag-number">{id}</span>}</div>);
   const complete = found.length === errors.length;
   return (
     <section className="stage">
       <ModuleHead number="02" onBack={back} title={<>Encontre o que <span className="accent-word">não deveria passar.</span></>}
-        intro="Uma folha de registro de lote guarda pistas importantes. Localize os quatro pontos de risco. Clique nos marcadores numerados da folha — cada descoberta traz uma explicação." />
+        intro="Uma folha de registro de lote guarda pistas importantes. Localize os cinco pontos de risco. Clique nos marcadores numerados da folha — cada descoberta traz uma explicação." />
       <div className="hunt-layout">
         <div className="record-sheet" aria-label="Folha de registro de lote simulada">
           <div className="sheet-title">Registro de lote</div>
@@ -809,22 +826,45 @@ function ErrorHunt({ next, back, found, setFound }) {
             <div className="sheet-cell"><span>Lote</span><b className="hand">R2P-047</b></div>
             <div className="sheet-cell"><span>Data de fabricação</span><b className="hand">12/06/24</b></div>
             <div className="sheet-cell"><span>Responsável</span><b className="hand">M. Alves</b></div>
-            <div className="sheet-cell"><span>Temperatura inicial</span><b className="hand">22,4 °C</b></div>
-            <div className="sheet-cell" style={{ position: 'relative', zIndex: 2 }}>
-              <span>Horário</span><b className="hand">08:14</b>
-              <div className={`red-flag flag-2 ${found.includes(2) ? 'found' : ''}`} onClick={() => find(2)} role="button" tabIndex={0}><span className="flag-number">2</span></div>
-            </div>
-            <div className="sheet-cell"><span>Conferência</span><b className="hand">M. Alves</b></div>
           </div>
-          <div className="sheet-body">
+          <table className="rs-table">
+            <colgroup><col style={{ width: '30%' }} /><col style={{ width: '17%' }} /><col style={{ width: '16%' }} /><col style={{ width: '18.5%' }} /><col style={{ width: '18.5%' }} /></colgroup>
+            <thead><tr><th>Etapa / parâmetro</th><th>Valor</th><th>Hora</th><th>Executado por</th><th>Conferido por</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>1. Pesagem MP-A<small>Limite: 10,0 ± 0,2 kg</small></td>
+                <td className="hand">10,1 kg</td>
+                <td className="hand">08:14{flag(1, true)}</td>
+                <td className="hand">M. Alves</td>
+                <td className="hand">R. Souza</td>
+              </tr>
+              <tr>
+                <td>2. Temperatura inicial<small>Limite: 20 a 25 °C</small></td>
+                <td><span className="wo"><span className="hand">22,1 °C</span></span>{flag(2, true)}</td>
+                <td className="hand">08:14{flag(1, false)}</td>
+                <td className="hand">M. Alves</td>
+                <td className="hand">M. Alves{flag(3, true)}</td>
+              </tr>
+              <tr>
+                <td>3. Início da mistura<small>Conforme procedimento</small></td>
+                <td className="hand">400 rpm</td>
+                <td className="hand">08:14{flag(1, false)}</td>
+                <td className="hand">M. Alves</td>
+                <td className="hand">R. Souza</td>
+              </tr>
+              <tr>
+                <td>4. Amostragem para CQ<small>3 amostras</small></td>
+                <td>{flag(4, true)}</td>
+                <td>{flag(4, false)}</td>
+                <td>{flag(4, false)}</td>
+                <td>{flag(4, false)}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div className="sheet-body rs-obs">
             <div style={{ color: '#78837b', fontSize: '.56rem', letterSpacing: '.08em' }}>OBSERVAÇÕES DA ETAPA</div>
             <div className="hand" style={{ marginTop: '.4rem' }}>Mistura iniciada conforme procedimento. Temperatura dentro do limite.</div>
-            <div className={`red-flag flag-1 ${found.includes(1) ? 'found' : ''}`} onClick={() => find(1)} role="button" tabIndex={0}><span className="flag-number">1</span></div>
-            <div className={`red-flag flag-3 ${found.includes(3) ? 'found' : ''}`} onClick={() => find(3)} role="button" tabIndex={0}>
-              <span className="flag-number">3</span>
-              <span style={{ position: 'absolute', inset: '12px 5px', fontSize: '.57rem', color: '#b65b45' }}>anotei aqui</span>
-            </div>
-            <div className={`red-flag flag-4 ${found.includes(4) ? 'found' : ''}`} onClick={() => find(4)} role="button" tabIndex={0}><span className="flag-number">4</span></div>
+            <div className="rs-note"><span className="rs-tape" /><div className="hand">pH 6,8<br />22,3 °C<br /><span style={{ fontSize: '.85em' }}>passar p/ ficha depois</span></div>{flag(5, true)}</div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem', fontSize: '.62rem', color: '#78837b' }}>
             <span>Documento controlado · página 01/01</span><span>Rev. 03</span>
@@ -832,7 +872,7 @@ function ErrorHunt({ next, back, found, setFound }) {
         </div>
         <aside className="hunt-side">
           <span className="eyebrow">Varredura de integridade</span>
-          <div className="hunt-count">{found.length}<small>/ 4 encontrados</small></div>
+          <div className="hunt-count">{found.length}<small>/ 5 encontrados</small></div>
           <p className="hunt-instructions">Não existe registro pequeno demais quando a segurança do paciente está em jogo.</p>
           <div className="found-list">
             {errors.map(error => (
@@ -846,7 +886,7 @@ function ErrorHunt({ next, back, found, setFound }) {
           )}
           {complete && (
             <div className="feedback" style={{ background: 'hsl(var(--primary) / .1)', borderColor: 'hsl(var(--primary) / .3)' }}>
-              <strong>Varredura concluída.</strong> Os quatro riscos deste registro foram identificados — exatamente o tipo de atenção que protege um lote inteiro.
+              <strong>Varredura concluída.</strong> Os cinco riscos deste registro foram identificados — exatamente o tipo de atenção que protege um lote inteiro.
             </div>
           )}
         </aside>
@@ -1096,7 +1136,7 @@ function Finish({ onRestart, summary, playerName }) {
   const [issued, setIssued] = useState(false);
   const completionDate = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
   const totalPoints = summary.alcoaViewed + summary.errorsFound + summary.correctionScore + summary.hierarchyScore + summary.dilemmaScore + summary.quizScore + summary.casesScore + summary.dataScore + summary.rulesScore + summary.bpdScore;
-  const maxPoints = 28 + 4 + 7 + 6 + 10;
+  const maxPoints = 28 + 5 + 7 + 6 + 10;
   const scorePercent = Math.round((totalPoints / maxPoints) * 100);
   const rank = scorePercent >= 85 ? 'Guardião Ouro' : scorePercent >= 65 ? 'Guardião Prata' : 'Guardião Bronze';
   React.useEffect(() => { track('conclusao', { pontuacao: scorePercent, titulo: rank, pontos: totalPoints, pontos_max: maxPoints }); }, []);
@@ -1159,7 +1199,7 @@ function Finish({ onRestart, summary, playerName }) {
 
     const cols = [
       ['ALCOA+', summary.alcoaViewed + '/6'],
-      ['Caça ao erro', summary.errorsFound + '/4'],
+      ['Caça ao erro', summary.errorsFound + '/5'],
       ['Correção & assinatura', summary.correctionScore + '/5'],
       ['Hierarquia documental', summary.hierarchyScore + '/5'],
       ['Dilema ético', summary.dilemmaScore + '/1'],
@@ -1244,7 +1284,7 @@ function Finish({ onRestart, summary, playerName }) {
             </div>
             <div className="recap-grid">
               <div className="recap-card"><span>ALCOA+</span><strong>{summary.alcoaViewed}/6</strong><small>princípios revisados</small></div>
-              <div className="recap-card"><span>Caça ao erro</span><strong>{summary.errorsFound}/4</strong><small>riscos identificados</small></div>
+              <div className="recap-card"><span>Caça ao erro</span><strong>{summary.errorsFound}/5</strong><small>riscos identificados</small></div>
               <div className="recap-card"><span>Correção & assinatura</span><strong>{summary.correctionScore}/5</strong><small>situações corretas</small></div>
               <div className="recap-card"><span>Hierarquia documental</span><strong>{summary.hierarchyScore}/5</strong><small>exemplos classificados</small></div>
               <div className="recap-card"><span>Dilema ético</span><strong>{summary.dilemmaScore}/1</strong><small>decisão íntegra</small></div>
