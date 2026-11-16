@@ -130,6 +130,7 @@
                     Vez de: <span id="turn-name" class="text-amber-300"></span>
                 </div>
                 <div class="flex items-center gap-2 text-sm">
+                    <span id="round-label" class="bg-sky-500/20 text-sky-300 border border-sky-500/40 rounded-full px-2 py-0.5 text-xs font-bold"></span>
                     <span class="text-slate-400">Chances restantes:</span>
                     <span id="turn-chances" class="flex gap-1"></span>
                 </div>
@@ -235,7 +236,7 @@
                 <summary class="cursor-pointer font-bold text-sky-300">📋 Regras do jogo</summary>
                 <ul class="mt-2 space-y-1.5">
                     <li>👥 <b>Formação de equipes:</b> grupos se revezam no tabuleiro.</li>
-                    <li>🎲 <b>Vez do grupo:</b> cada grupo tem 2 chances (2 tentativas de formar par) por vez.</li>
+                    <li>🎲 <b>Primeira rodada:</b> cada grupo tem 2 chances (2 tentativas de formar par). Da segunda rodada em diante, é 1 chance por vez.</li>
                     <li>🃏 <b>Par comum:</b> +1 ponto.</li>
                     <li>💬 <b>Comentário temático:</b> comentar sobre o tema da carta vale +1 ponto extra.</li>
                     <li>⭐ <b>Carta bônus:</b> achar o par da carta bônus vale +1 ponto.</li>
@@ -425,10 +426,13 @@
         }
 
         // ===== EQUIPES E PONTUAÇÃO =====
-        const CHANCES_PER_TURN = 2;
+        const FIRST_ROUND_CHANCES = 2;   // 1ª rodada: 2 jogadas por grupo
+        const CHANCES_PER_TURN = 1;      // demais rodadas: 1 jogada por grupo
+        let round = 1;
+        function chancesForRound() { return round === 1 ? FIRST_ROUND_CHANCES : CHANCES_PER_TURN; }
         let groups = [{ name: 'Grupo 1', score: 0 }, { name: 'Grupo 2', score: 0 }];
         let currentGroup = 0;
-        let chancesLeft = CHANCES_PER_TURN;
+        let chancesLeft = FIRST_ROUND_CHANCES;
 
         // Capa com símbolo de interrogação (?) por padrão
         let customCover = { image: null };
@@ -478,7 +482,8 @@
                 groups.forEach(g => { g.pid = newPid(); trackGroup(g, 'cadastro'); trackGroup(g, 'inicio'); });
             }
             currentGroup = 0;
-            chancesLeft = CHANCES_PER_TURN;
+            round = 1;
+            chancesLeft = chancesForRound();
             renderScoreboard();
 
             // Baralho com 12 Pares (24 Cartas no total)
@@ -647,7 +652,8 @@
             }).join('');
             document.getElementById('turn-name').textContent = groups[currentGroup].name;
             let dots = '';
-            for (let i = 0; i < CHANCES_PER_TURN; i++) {
+            document.getElementById('round-label').textContent = `${round}ª rodada`;
+            for (let i = 0; i < chancesForRound(); i++) {
                 dots += `<span class="w-4 h-4 rounded-full ${i < chancesLeft ? 'bg-amber-400' : 'bg-slate-700'}"></span>`;
             }
             document.getElementById('turn-chances').innerHTML = dots;
@@ -674,9 +680,14 @@
             chancesLeft--;
             if (chancesLeft <= 0) {
                 currentGroup = (currentGroup + 1) % groups.length;
-                chancesLeft = CHANCES_PER_TURN;
+                let msg = `🎲 Vez de: ${groups[currentGroup].name}`;
+                if (currentGroup === 0) {
+                    round++;
+                    if (round === 2) msg = `🔄 Agora é 1 jogada por vez! Vez de: ${groups[currentGroup].name}`;
+                }
+                chancesLeft = chancesForRound();
                 renderScoreboard();
-                showTurnToast(`🎲 Vez de: ${groups[currentGroup].name}`);
+                showTurnToast(msg);
             } else {
                 renderScoreboard();
             }
