@@ -242,12 +242,25 @@
                     <li>⭐ <b>Carta bônus:</b> achar o par da carta bônus vale +1 ponto.</li>
                     <li>🎯 <b>Pergunta bônus (múltipla escolha) — acerto:</b> +3 pontos.</li>
                     <li>⚠️ <b>Pergunta bônus (erro/omissão):</b> −1 ponto.</li>
+                    <li>⚖️ <b>Empate no 1º lugar:</b> cada grupo empatado responde a uma pergunta bônus; vence quem acertar enquanto os outros erram (se todos acertarem ou errarem, nova rodada).</li>
                 </ul>
             </details>
 
             <button onclick="startGameWithGroups()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg active:scale-95">
                 <i class="fa-solid fa-play"></i> Começar jogo
             </button>
+        </div>
+    </div>
+
+    <!-- MODAL DE DESEMPATE -->
+    <div id="tiebreak-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-slate-800 border-2 border-amber-400/70 rounded-3xl p-5 md:p-7 max-w-2xl w-full max-h-[95vh] overflow-y-auto custom-scrollbar shadow-2xl text-center">
+            <div class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-3 bg-amber-400/20 text-amber-300 border border-amber-400/40">
+                <i class="fa-solid fa-scale-balanced"></i> <span id="tb-round">Desempate</span>
+            </div>
+            <h2 id="tb-title" class="text-xl md:text-2xl font-extrabold text-white mb-2"></h2>
+            <div id="tb-groups" class="flex flex-wrap justify-center gap-2 mb-4"></div>
+            <div id="tb-body"></div>
         </div>
     </div>
 
@@ -477,10 +490,11 @@
             victoryModalContent.classList.add('scale-95', 'opacity-0');
             document.getElementById('pair-modal').classList.add('hidden');
             pendingVictory = false;
-            groups.forEach(g => g.score = 0);
+            groups.forEach(g => { g.score = 0; g.tiebreakWin = false; });
             if (trackingReady) {
                 groups.forEach(g => { g.pid = newPid(); trackGroup(g, 'cadastro'); trackGroup(g, 'inicio'); });
             }
+            document.getElementById('tiebreak-modal').classList.add('hidden');
             currentGroup = 0;
             round = 1;
             chancesLeft = chancesForRound();
@@ -878,11 +892,127 @@
                 isBoardLocked = false;
                 if (pendingVictory) {
                     pendingVictory = false;
-                    handleVictory();
+                    checkTieOrVictory();
                 } else {
                     useChance();
                 }
             }, 200);
+        }
+
+        // ===== DESEMPATE =====
+        let tb = null; // { contenders:[idx], round, queue:[idx], results:{idx:bool} }
+
+        function checkTieOrVictory() {
+            const max = Math.max(...groups.map(g => g.score));
+            const tied = groups.map((g, i) => i).filter(i => groups[i].score === max);
+            if (tied.length >= 2) {
+                tb = { contenders: tied, round: 1 };
+                document.getElementById('tiebreak-modal').classList.remove('hidden');
+                startTiebreakRound(`Empate no 1º lugar com ${max} pontos!`);
+            } else {
+                handleVictory();
+            }
+        }
+
+        function renderTbGroups(highlight) {
+            document.getElementById('tb-groups').innerHTML = tb.contenders.map(i => {
+                const r = tb.results ? tb.results[i] : undefined;
+                let cls = 'bg-slate-900/70 border-slate-600 text-slate-200';
+                let icon = '';
+                if (i === highlight) cls = 'bg-amber-400/20 border-amber-400 text-amber-200';
+                if (r === true) { cls = 'bg-emerald-600/30 border-emerald-400 text-emerald-200'; icon = '✅ '; }
+                if (r === false) { cls = 'bg-rose-600/30 border-rose-400 text-rose-200'; icon = '❌ '; }
+                return `<span class="px-3 py-1 rounded-full border-2 text-sm font-bold ${cls}">${icon}${escapeHtml(groups[i].name)}</span>`;
+            }).join('');
+        }
+
+        function startTiebreakRound(titleText) {
+            tb.queue = [...tb.contenders];
+            tb.results = {};
+            document.getElementById('tb-round').textContent = `Desempate — rodada ${tb.round}`;
+            document.getElementById('tb-title').textContent = titleText;
+            renderTbGroups(null);
+            const body = document.getElementById('tb-body');
+            body.innerHTML = `<p class="text-slate-300 mb-4">Cada grupo empatado responde a uma <b>pergunta bônus</b> diferente. Vence quem acertar enquanto os demais erram. Se todos acertarem ou todos errarem, há nova rodada.</p>`;
+            body.appendChild(actionButton('▶ Começar desempate', 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500', nextTiebreakQuestion));
+        }
+
+        function nextTiebreakQuestion() {
+            if (tb.queue.length === 0) return finishTiebreakRound();
+            const g = tb.queue.shift();
+            const q = nextBonusQuestion();
+            const letters = ['A', 'B', 'C', 'D', 'E'];
+            const opts = shuffleArray(q.options.map((t, i) => ({ t, correct: i === 0 })));
+            renderTbGroups(g);
+            document.getElementById('tb-title').textContent = `Vez de: ${groups[g].name}`;
+
+            const body = document.getElementById('tb-body');
+            body.innerHTML = `
+                <div class="text-sky-300 font-bold text-sm mb-1">Pergunta Bônus ${q.n}</div>
+                <p class="text-white text-base md:text-lg font-semibold leading-relaxed mb-4">${escapeHtml(q.q)}</p>`;
+            const list = document.createElement('div');
+            list.className = 'flex flex-col gap-2 text-left mb-3';
+            const btns = [];
+            const feedback = document.createElement('div');
+
+            const answer = (chosen) => {
+                const ok = chosen !== null && opts[chosen].correct;
+                tb.results[g] = ok;
+                btns.forEach((b, i) => {
+                    b.disabled = true;
+                    b.classList.remove('hover:bg-slate-600', 'hover:border-sky-400');
+                    b.classList.add('cursor-default');
+                    if (opts[i].correct) { b.classList.remove('bg-slate-700', 'border-slate-600'); b.classList.add('bg-emerald-600/40', 'border-emerald-400'); }
+                    else if (i === chosen) { b.classList.remove('bg-slate-700', 'border-slate-600'); b.classList.add('bg-rose-600/40', 'border-rose-400'); }
+                    else b.classList.add('opacity-50');
+                });
+                skip.remove();
+                renderTbGroups(null);
+                const head = ok ? `<div class="text-emerald-300 font-bold mb-1">🎯 ${escapeHtml(groups[g].name)} acertou!</div>`
+                    : chosen === null ? `<div class="text-rose-300 font-bold mb-1">⚠️ ${escapeHtml(groups[g].name)} não respondeu.</div>`
+                    : `<div class="text-rose-300 font-bold mb-1">❌ ${escapeHtml(groups[g].name)} errou.</div>`;
+                feedback.className = 'bg-slate-900/70 border border-slate-700 rounded-xl p-3 mb-3 text-left';
+                feedback.innerHTML = `${head}<div class="text-slate-300 text-sm">💡 ${escapeHtml(q.exp)}</div>`;
+                const next = actionButton(tb.queue.length ? 'Próximo grupo ➜' : 'Ver resultado do desempate ➜',
+                    'bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-400 hover:to-cyan-500', nextTiebreakQuestion);
+                body.appendChild(next);
+                next.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            };
+
+            opts.forEach((o, i) => {
+                const b = document.createElement('button');
+                b.className = 'w-full flex items-start gap-3 bg-slate-700 hover:bg-slate-600 border-2 border-slate-600 hover:border-sky-400 rounded-xl px-3 py-2.5 text-sm md:text-base text-white transition-all';
+                b.innerHTML = `<span class="shrink-0 w-7 h-7 rounded-lg bg-sky-500/30 text-sky-200 font-extrabold flex items-center justify-center">${letters[i]}</span><span class="pt-0.5">${escapeHtml(o.t)}</span>`;
+                b.onclick = () => answer(i);
+                btns.push(b);
+                list.appendChild(b);
+            });
+            body.appendChild(list);
+            const skip = actionButton('⚠️ Não responder', 'bg-slate-600 hover:bg-rose-700 text-sm py-2 mb-3', () => answer(null));
+            body.appendChild(skip);
+            body.appendChild(feedback);
+        }
+
+        function finishTiebreakRound() {
+            const right = tb.contenders.filter(i => tb.results[i]);
+            if (right.length === 1) {
+                const w = right[0];
+                groups[w].tiebreakWin = true;
+                renderTbGroups(null);
+                document.getElementById('tb-title').textContent = `🏆 ${groups[w].name} venceu o desempate!`;
+                const body = document.getElementById('tb-body');
+                body.innerHTML = '';
+                body.appendChild(actionButton('Ver classificação final ➜', 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500', () => {
+                    document.getElementById('tiebreak-modal').classList.add('hidden');
+                    handleVictory();
+                }));
+                return;
+            }
+            // Todos erraram -> mesmos grupos continuam; vários acertaram -> só eles continuam
+            const allWrong = right.length === 0;
+            if (!allWrong) tb.contenders = right;
+            tb.round++;
+            startTiebreakRound(allWrong ? 'Ninguém acertou — o empate continua!' : 'Mais de um grupo acertou — o empate continua!');
         }
 
         function handleVictory() {
@@ -891,14 +1021,16 @@
             document.getElementById('final-time').textContent = timerElement.textContent;
             document.getElementById('final-moves').textContent = moves;
 
-            const sorted = groups.map(g => ({ ...g })).sort((a, b) => b.score - a.score);
+            const rankKey = g => g.score + (g.tiebreakWin ? 0.5 : 0);
+            const sorted = groups.map(g => ({ ...g })).sort((a, b) => rankKey(b) - rankKey(a));
             const medals = ['🥇', '🥈', '🥉'];
-            let pos = 0, lastScore = null;
+            let pos = 0, lastKey = null;
             document.getElementById('final-ranking').innerHTML = sorted.map((g, i) => {
-                if (g.score !== lastScore) { pos = i; lastScore = g.score; }
+                if (rankKey(g) !== lastKey) { pos = i; lastKey = rankKey(g); }
                 const top = pos === 0;
+                const tbTag = g.tiebreakWin ? ' <span class="text-[11px] font-semibold bg-amber-400/20 text-amber-200 border border-amber-400/40 rounded-full px-2 py-0.5 ml-1">venceu no desempate</span>' : '';
                 return `<div class="flex items-center justify-between rounded-xl px-4 py-2 border ${top ? 'bg-amber-400/15 border-amber-400/60' : 'bg-slate-900/70 border-slate-700/50'}">
-                    <span class="font-bold ${top ? 'text-amber-300' : 'text-slate-200'}">${medals[pos] || (pos + 1) + 'º'} ${escapeHtml(g.name)}</span>
+                    <span class="font-bold ${top ? 'text-amber-300' : 'text-slate-200'}">${medals[pos] || (pos + 1) + 'º'} ${escapeHtml(g.name)}${tbTag}</span>
                     <span class="font-mono font-extrabold text-lg ${top ? 'text-amber-300' : 'text-sky-300'}">${g.score} pts</span>
                 </div>`;
             }).join('');
@@ -906,8 +1038,8 @@
             if (trackingReady) {
                 let p = 0, last = null;
                 const posOf = {};
-                sorted.forEach((g, i) => { if (g.score !== last) { p = i; last = g.score; } posOf[g.pid] = p + 1; });
-                groups.forEach(g => trackGroup(g, 'conclusao', { pontos: g.score, titulo: `${posOf[g.pid]}º lugar de ${groups.length}` }));
+                sorted.forEach((g, i) => { if (rankKey(g) !== last) { p = i; last = rankKey(g); } posOf[g.pid] = p + 1; });
+                groups.forEach(g => trackGroup(g, 'conclusao', { pontos: g.score, titulo: `${posOf[g.pid]}º lugar de ${groups.length}` + (g.tiebreakWin ? ' (desempate)' : '') }));
             }
 
             triggerConfetti();
