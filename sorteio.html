@@ -312,8 +312,10 @@ function confetti(){const cols=['#ffd24a','#4ec6bc','#0e5aa3','#ff7a00','#5aa9ff
 function draw(){if(S.busy)return;const p=pool();if(!p.length)return;S.busy=true;S.cur=null;clearInterval(mt);
  const win=p[rnd(p.length)];
  $('app').innerHTML=`<div class="rw"><div class="stagew"><div class="side"><img src="${MAS[1][1]}" alt=""></div><div class="mid"><img class="mimg" id="mi" src="${MAS[0][1]}" alt="Mascote"><p class="lbl" id="ml">Sorteando…</p><div class="nameb spin" id="nb">…</div></div><div class="side"><img src="${MAS[2][1]}" alt=""></div></div></div>`;
- let n=0;const total=34;const iv=setInterval(()=>{n++;$('nb').textContent=S.names[rnd(S.names.length)];if(n%4===0){mi++;const q=MAS[mi%MAS.length];$('mi').src=q[1]}beep(420+n*12,0,.06,.08);
-  if(n>=total){clearInterval(iv);S.cur=win;S.won.push(win);save();S.busy=false;stage();confetti();[523,659,784,1047,1319].forEach((f,i)=>beep(f,i*.14,.35,.22))}},n<20?90:150+ (n-20)*18)}
+ let n=0;const DUR=10000,t0=performance.now();
+  const fim=()=>{$('nb').textContent=win;S.cur=win;S.won.push(win);save();S.busy=false;setTimeout(()=>{stage();confetti();[523,659,784,1047,1319].forEach((f,i)=>beep(f,i*.14,.35,.22))},700)};
+  const tick=()=>{const el=performance.now()-t0;if(el>=DUR){fim();return}n++;let nm=S.names[rnd(S.names.length)];for(let k=0;k<5&&nm===$('nb').textContent;k++)nm=S.names[rnd(S.names.length)];$('nb').textContent=nm;if(n%4===0){mi++;const q=MAS[mi%MAS.length];$('mi').src=q[1]}const pr=el/DUR;beep(420+Math.round(pr*500),0,.06,.08);setTimeout(tick,60+Math.pow(pr,3)*560)};
+  tick()}
 document.addEventListener('keydown',e=>{if((e.code==='Space'||e.key==='Enter')&&S.scr==='stage'&&!/BUTTON|INPUT|TEXTAREA/.test(e.target.tagName||'')){e.preventDefault();draw()}});
 setup();
 </script></body></html>
